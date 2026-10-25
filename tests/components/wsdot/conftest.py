@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from pytest_homeassistant.common import MockConfigEntry, load_json_object_fixture
+from pytest_homeassistant.test_util.aiohttp import AiohttpClientMocker
 from wsdot import TravelTime, WsdotTravelError
 
 from homeassistant.components.wsdot.const import DOMAIN
@@ -31,6 +32,21 @@ def mock_travel_time() -> Generator[AsyncMock]:
         client.get_travel_time.return_value = response
         client.get_all_travel_times.return_value = [response]
         yield client
+
+
+@pytest.fixture
+def mock_https_api(aioclient_mock: AiohttpClientMocker) -> AiohttpClientMocker:
+    """Answer WSDOT API requests over HTTPS only, through the real library."""
+    travel_time = load_json_object_fixture("wsdot.json", DOMAIN)
+    base_url = "https://wsdot.wa.gov/traffic/api/TravelTimes/TravelTimesREST.svc"
+    headers = {"Content-Type": "application/json"}
+    aioclient_mock.get(
+        f"{base_url}/GetTravelTimesAsJson", json=[travel_time], headers=headers
+    )
+    aioclient_mock.get(
+        f"{base_url}/GetTravelTimeAsJson", json=travel_time, headers=headers
+    )
+    return aioclient_mock
 
 
 @pytest.fixture

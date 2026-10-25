@@ -8,6 +8,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
+from .const import API_URL
+
 PLATFORMS = [Platform.SENSOR]
 
 
@@ -19,6 +21,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WsdotConfigEntry) -> Non
     session = async_get_clientsession(hass)
     api_key = entry.data[CONF_API_KEY]
     wsdot_travel_times = wsdot_api.WsdotTravelTimes(api_key=api_key, session=session)
+    wsdot_travel_times.url = API_URL
     try:
         # The only way to validate the provided API key is to request data
         # we don't need the data here, only the non-exception

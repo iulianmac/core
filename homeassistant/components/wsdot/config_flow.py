@@ -16,9 +16,10 @@ from homeassistant.config_entries import (
 )
 from homeassistant.const import CONF_API_KEY, CONF_ID, CONF_NAME
 from homeassistant.core import callback
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig
 
-from .const import DOMAIN, SUBENTRY_TRAVEL_TIMES
+from .const import API_URL, DOMAIN, SUBENTRY_TRAVEL_TIMES
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,7 +40,10 @@ class WSDOTConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             data = {CONF_API_KEY: user_input[CONF_API_KEY]}
             self._async_abort_entries_match(data)
-            wsdot_travel_times = wsdot_api.WsdotTravelTimes(user_input[CONF_API_KEY])
+            wsdot_travel_times = wsdot_api.WsdotTravelTimes(
+                user_input[CONF_API_KEY], session=async_get_clientsession(self.hass)
+            )
+            wsdot_travel_times.url = API_URL
             try:
                 await wsdot_travel_times.get_all_travel_times()
             except wsdot_api.WsdotTravelError as ws_error:

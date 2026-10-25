@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from pytest_homeassistant.common import MockConfigEntry
+from pytest_homeassistant.test_util.aiohttp import AiohttpClientMocker
 from wsdot import WsdotTravelError
 
 from homeassistant.components.wsdot.const import DOMAIN, SUBENTRY_TRAVEL_TIMES
@@ -42,6 +43,22 @@ async def test_create_user_entry(
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == DOMAIN
     assert result["data"][CONF_API_KEY] == "abcd-1234"
+
+
+async def test_create_user_entry_uses_https(
+    hass: HomeAssistant, mock_https_api: AiohttpClientMocker
+) -> None:
+    """Test the user step only sends the access code over HTTPS."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        user_input=VALID_USER_CONFIG,
+    )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert {url.scheme for _, url, _, _ in mock_https_api.mock_calls} == {"https"}
 
 
 @pytest.mark.parametrize(
