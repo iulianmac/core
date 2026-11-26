@@ -509,8 +509,8 @@ def state_from_config(config: ConfigType) -> ConditionCheckerType:
                     )
                 )
 
-        # Raise the errors if no check was false
-        if errors:
+        # Raise the errors if no check was false, or with match any, none was true
+        if errors and not (match == ENTITY_MATCH_ANY and result):
             raise ConditionErrorContainer("state", errors=errors)
 
         return result

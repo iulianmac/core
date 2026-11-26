@@ -1871,6 +1871,27 @@ async def test_state_multiple_entities_match_any(hass: HomeAssistant) -> None:
     assert not test.async_check()
 
 
+async def test_state_match_any_with_missing_entity(hass: HomeAssistant) -> None:
+    """Test match any passes when one entity is missing and another matches."""
+    config = {
+        "condition": "state",
+        "entity_id": ["sensor.missing", "sensor.temperature"],
+        "match": "any",
+        "state": "100",
+    }
+    config = cv.CONDITION_SCHEMA(config)
+    config = await condition.async_validate_condition_config(hass, config)
+    test = await condition.async_from_config(hass, config)
+
+    hass.states.async_set("sensor.temperature", 100)
+    assert test.async_check()
+
+    # Without a match, the error for the missing entity is still raised
+    hass.states.async_set("sensor.temperature", 101)
+    with pytest.raises(ConditionError, match="unknown entity sensor.missing"):
+        test.async_check()
+
+
 async def test_multiple_states(hass: HomeAssistant) -> None:
     """Test with multiple states in condition."""
     config = {
