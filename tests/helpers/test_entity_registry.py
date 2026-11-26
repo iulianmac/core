@@ -6052,6 +6052,90 @@ async def test_migrate_entity_to_new_platform_error_handling(
         )
 
 
+@pytest.mark.parametrize(
+    ("new_unique_id", "taken_unique_id"),
+    [
+        pytest.param(Undefined, "1234", id="unique_id_not_passed"),
+        pytest.param("1234", "1234", id="unique_id_unchanged"),
+        pytest.param("5678", "5678", id="new_unique_id"),
+    ],
+)
+async def test_migrate_entity_to_new_platform_unique_id_conflict(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    new_unique_id: str | Undefined,
+    taken_unique_id: str,
+) -> None:
+    """Test migrating to a platform where the unique ID is already in use."""
+    hue_entry = MockConfigEntry(domain="hue")
+    hue_entry.add_to_hass(hass)
+    hue2_entry = MockConfigEntry(domain="hue2")
+    hue2_entry.add_to_hass(hass)
+    entry = entity_registry.async_get_or_create(
+        "light", "hue", "1234", config_entry=hue_entry
+    )
+    taken = entity_registry.async_get_or_create(
+        "light", "hue2", taken_unique_id, config_entry=hue2_entry
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=f"Unique id '{taken_unique_id}' is already in use by '{taken.entity_id}'",
+    ):
+        entity_registry.async_update_entity_platform(
+            entry.entity_id,
+            "hue2",
+            new_config_entry_id=hue2_entry.entry_id,
+            new_unique_id=new_unique_id,
+        )
+
+    assert entity_registry.async_get(entry.entity_id) == entry
+    assert (
+        entity_registry.async_get_entity_id("light", "hue2", taken_unique_id)
+        == taken.entity_id
+    )
+
+
+@pytest.mark.parametrize(
+    ("new_unique_id", "expected_unique_id", "expected_previous_unique_id"),
+    [
+        pytest.param("1234", "1234", None, id="unique_id_unchanged"),
+        pytest.param("5678", "5678", "1234", id="taken_on_old_platform_only"),
+    ],
+)
+async def test_migrate_entity_to_new_platform_unique_id_free(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    new_unique_id: str,
+    expected_unique_id: str,
+    expected_previous_unique_id: str | None,
+) -> None:
+    """Test migrating when the unique ID is only in use on the old platform."""
+    hue_entry = MockConfigEntry(domain="hue")
+    hue_entry.add_to_hass(hass)
+    hue2_entry = MockConfigEntry(domain="hue2")
+    hue2_entry.add_to_hass(hass)
+    entry = entity_registry.async_get_or_create(
+        "light", "hue", "1234", config_entry=hue_entry
+    )
+    entity_registry.async_get_or_create("light", "hue", "5678", config_entry=hue_entry)
+
+    updated = entity_registry.async_update_entity_platform(
+        entry.entity_id,
+        "hue2",
+        new_config_entry_id=hue2_entry.entry_id,
+        new_unique_id=new_unique_id,
+    )
+
+    assert updated.platform == "hue2"
+    assert updated.unique_id == expected_unique_id
+    assert updated.previous_unique_id == expected_previous_unique_id
+    assert (
+        entity_registry.async_get_entity_id("light", "hue2", expected_unique_id)
+        == entry.entity_id
+    )
+
+
 @pytest.mark.usefixtures("areas_and_labels")
 async def test_restore_entity(
     hass: HomeAssistant,

@@ -2160,15 +2160,19 @@ class EntityRegistry(BaseRegistry):
             entity_id = new_values["entity_id"] = new_entity_id
             old_values["entity_id"] = old.entity_id
 
-        if new_unique_id is not Undefined:
+        if "platform" in new_values and new_unique_id == old.unique_id:
+            new_unique_id = Undefined
+        if new_unique_id is not Undefined or "platform" in new_values:
+            unique_id = old.unique_id if new_unique_id is Undefined else new_unique_id
             conflict_entity_id = self.async_get_entity_id(
-                old.domain, old.platform, new_unique_id
+                old.domain, new_values.get("platform", old.platform), unique_id
             )
             if conflict_entity_id:
                 raise ValueError(
-                    f"Unique id '{new_unique_id}' is already in use by "
+                    f"Unique id '{unique_id}' is already in use by "
                     f"'{conflict_entity_id}'"
                 )
+        if new_unique_id is not Undefined:
             new_values["unique_id"] = new_unique_id
             old_values["unique_id"] = old.unique_id
             new_values["previous_unique_id"] = old.unique_id
