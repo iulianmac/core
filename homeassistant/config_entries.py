@@ -1416,7 +1416,10 @@ class ConfigEntry[_DataT = Any]:
         """Process the on_state_change callbacks and wait for pending tasks."""
         if self._on_state_change is None:
             return
-        for func in self._on_state_change:
+        for func in list(self._on_state_change):
+            # A callback may unsubscribe itself or others while we iterate
+            if func not in self._on_state_change:
+                continue
             try:
                 func()
             except Exception:

@@ -6904,6 +6904,56 @@ async def test_entry_state_change_listener_removed(
     assert entry.state is config_entries.ConfigEntryState.NOT_LOADED
 
 
+async def test_entry_state_change_listener_removed_in_callback(
+    hass: HomeAssistant,
+    manager: config_entries.ConfigEntries,
+) -> None:
+    """Test listeners removed in a callback are skipped, and only those."""
+    entry = MockConfigEntry(
+        domain="comp", state=config_entries.ConfigEntryState.NOT_LOADED
+    )
+    entry.add_to_hass(hass)
+
+    mock_integration(
+        hass,
+        MockModule(
+            "comp",
+            async_setup=AsyncMock(return_value=True),
+            async_setup_entry=AsyncMock(return_value=None),
+        ),
+    )
+    mock_platform(hass, "comp.config_flow", None)
+    hass.config.components.add("comp")
+
+    calls: list[tuple[str, config_entries.ConfigEntryState]] = []
+
+    @callback
+    def first() -> None:
+        calls.append(("first", entry.state))
+        remove_first()
+        remove_third()
+
+    @callback
+    def second() -> None:
+        calls.append(("second", entry.state))
+
+    @callback
+    def third() -> None:
+        calls.append(("third", entry.state))
+
+    remove_first = entry.async_on_state_change(first)
+    entry.async_on_state_change(second)
+    remove_third = entry.async_on_state_change(third)
+
+    await manager.async_setup(entry.entry_id)
+
+    assert calls == [
+        ("first", config_entries.ConfigEntryState.SETUP_IN_PROGRESS),
+        ("second", config_entries.ConfigEntryState.SETUP_IN_PROGRESS),
+        ("second", config_entries.ConfigEntryState.LOADED),
+    ]
+
+
 async def test_entry_state_change_error_does_not_block_transition(
     hass: HomeAssistant,
     manager: config_entries.ConfigEntries,
