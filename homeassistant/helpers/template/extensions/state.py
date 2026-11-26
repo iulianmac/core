@@ -170,6 +170,7 @@ class StateExtension(BaseTemplateExtension):
         hass = self.hass
         search = list(args)
         found = {}
+        expanded: set[str] = set()
         sources = entity_helper.entity_sources(hass)
         while search:
             entity = search.pop()
@@ -186,17 +187,19 @@ class StateExtension(BaseTemplateExtension):
                 # ignore other types
                 continue
 
-            if entity_id in found:
+            if entity_id in found or entity_id in expanded:
                 continue
 
             domain = entity.domain
             if domain == "group" or (
                 (source := sources.get(entity_id)) and source["domain"] == "group"
             ):
+                expanded.add(entity_id)
                 # Collect state will be called in here since it's wrapped
                 if group_entities := entity.attributes.get(ATTR_ENTITY_ID):
                     search += group_entities
             elif domain == "zone":
+                expanded.add(entity_id)
                 if zone_entities := entity.attributes.get(ATTR_PERSONS):
                     search += zone_entities
             else:

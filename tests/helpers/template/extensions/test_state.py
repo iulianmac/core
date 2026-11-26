@@ -1019,6 +1019,18 @@ async def test_expand(hass: HomeAssistant) -> None:
     )
 
 
+async def test_expand_group_cycle(hass: HomeAssistant) -> None:
+    """Test expand returns the members of groups that include each other."""
+    hass.states.async_set("light.x", "on")
+    hass.states.async_set("group.a", "on", {"entity_id": ["group.b", "light.x"]})
+    hass.states.async_set("group.b", "on", {"entity_id": ["group.a", "group.b"]})
+
+    info = render_to_info(
+        hass, "{{ expand('group.a') | map(attribute='entity_id') | join(', ') }}"
+    )
+    assert_result_info(info, "light.x", ["group.a", "group.b", "light.x"])
+
+
 def test_closest_function_to_coord(hass: HomeAssistant) -> None:
     """Test closest function to coord."""
     hass.states.async_set(
