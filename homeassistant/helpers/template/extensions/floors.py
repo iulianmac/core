@@ -110,12 +110,16 @@ class FloorExtension(BaseTemplateExtension):
         return None
 
     def _floor_id_or_name(self, floor_id_or_name: str) -> str | None:
-        """Get the floor ID from a floor name or ID."""
-        # If floor_name returns a value, we know the input was an ID, otherwise we
-        # assume it's a name, and if it's neither, we return early.
-        if self.floor_name(floor_id_or_name) is not None:
+        """Get the floor ID from a floor name, alias or ID."""
+        floor_registry = fr.async_get(self.hass)
+        if floor_registry.async_get_floor(floor_id_or_name):
             return floor_id_or_name
-        return self.floor_id(floor_id_or_name)
+        lookup_str = str(floor_id_or_name)
+        if floor := floor_registry.async_get_floor_by_name(lookup_str):
+            return floor.floor_id
+        if floors_list := floor_registry.async_get_floors_by_alias(lookup_str):
+            return floors_list[0].floor_id
+        return None
 
     def floor_areas(self, floor_id_or_name: str) -> Iterable[str]:
         """Return area IDs for a given floor ID or name."""

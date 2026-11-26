@@ -229,6 +229,32 @@ async def test_floor_areas(
     assert info.rate_limit is None
 
 
+async def test_floor_areas_and_entities_area_named_like_floor(
+    hass: HomeAssistant,
+    floor_registry: fr.FloorRegistry,
+    area_registry: ar.AreaRegistry,
+    entity_registry: er.EntityRegistry,
+) -> None:
+    """Test looking up a floor by name when an area has the same name."""
+    floor = floor_registry.async_create("Basement")
+    laundry = area_registry.async_create("Laundry", floor_id=floor.floor_id)
+    basement = area_registry.async_create("Basement", floor_id=floor.floor_id)
+    entry = entity_registry.async_get_or_create(
+        "light", "hue", "5678", suggested_object_id="washer"
+    )
+    entity_registry.async_update_entity(entry.entity_id, area_id=laundry.id)
+
+    info = render_to_info(hass, "{{ floor_areas('Basement') | sort }}")
+    assert_result_info(info, sorted([laundry.id, basement.id]))
+
+    info = render_to_info(hass, "{{ floor_entities('Basement') }}")
+    assert_result_info(info, ["light.washer"])
+
+    # An area name is not a floor
+    info = render_to_info(hass, "{{ floor_areas('Laundry') }}")
+    assert_result_info(info, [])
+
+
 async def test_floor_entities(
     hass: HomeAssistant,
     floor_registry: fr.FloorRegistry,
