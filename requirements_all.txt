@@ -2239,7 +2239,7 @@ pydaikin==2.24.1
 pydanfossair==1.0.0
 
 # homeassistant.components.deako
-pydeako-community==0.7.1
+pydeako-community==0.7.2
 
 # homeassistant.components.deconz
 pydeconz==120
