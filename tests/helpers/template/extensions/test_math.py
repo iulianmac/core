@@ -527,6 +527,21 @@ def test_remap_clamp_stays_within_output_range(
     assert MathExtension.remap(value, 0, 1, out_min, out_max, edges="clamp") == expected
 
 
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        pytest.param(50, 0.5, id="inside_range"),
+        pytest.param(100, 0.0, id="at_in_min"),
+        pytest.param(0, 1.0, id="at_in_max"),
+        pytest.param(150, 0.0, id="above_range"),
+        pytest.param(-50, 1.0, id="below_range"),
+    ],
+)
+def test_remap_clamp_inverted_input_range(value: float, expected: float) -> None:
+    """Test clamp with an input range from high to low."""
+    assert MathExtension.remap(value, 100, 0, 0, 1, edges="clamp") == expected
+
+
 def test_remap_with_steps(hass: HomeAssistant) -> None:
     """Test remap function with steps parameter."""
     # Test basic stepping - quantize to 10 steps

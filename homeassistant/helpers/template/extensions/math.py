@@ -468,7 +468,8 @@ class MathExtension(BaseTemplateExtension):
 
         # Apply edge behavior in original space for accuracy.
         if edges == "clamp":
-            value_num = max(in_min_num, min(in_max_num, value_num))
+            low, high = sorted((in_min_num, in_max_num))
+            value_num = max(low, min(high, value_num))
         elif edges == "wrap":
             if in_min_num == in_max_num:
                 raise ValueError(f"{in_min=} must not equal {in_max=}")
